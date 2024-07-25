@@ -80,8 +80,11 @@ function QuestController.Init(self: QuestController)
 		local IsCurrentDataNil = CurrentData == nil
 		
 		if not IsCurrentDataNil then
+			local PreviousData = table.clone(CurrentData)
+			CurrentData = Quests
+			
 			-- Fire events if possible
-			local CombinedTable: { QuestInstance } = CombineTables(CurrentData, Quests)
+			local CombinedTable: { QuestInstance } = CombineTables(PreviousData, Quests)
 			
 			local AccountedForQuestsHashMap: { [string]: true? } = {}
 			
@@ -90,14 +93,14 @@ function QuestController.Init(self: QuestController)
 					continue
 				end
 				
-				local QuestFromCurrentData = FindQuestInTable(CurrentData, Quest.Id)
+				local QuestFromCurrentData = FindQuestInTable(PreviousData, Quest.Id)
 				local QuestFromNewData = FindQuestInTable(Quests, Quest.Id)
 				
 				local IsNewQuest = QuestFromCurrentData == nil and QuestFromNewData ~= nil
 				local IsOldQuest = QuestFromNewData == nil and QuestFromCurrentData ~= nil
 				
-				if IsNewQuest then self.QuestStarted:Fire(Quest)
-				elseif IsOldQuest then self.QuestRemoved:Fire(Quest)
+				if IsNewQuest then self.QuestStarted:Fire(QuestFromNewData)
+				elseif IsOldQuest then self.QuestRemoved:Fire(QuestFromCurrentData)
 					
 				elseif QuestFromCurrentData.CurrentValue ~= QuestFromNewData.CurrentValue
 					or QuestFromCurrentData.IsCompleted ~= QuestFromNewData.IsCompleted
@@ -107,13 +110,14 @@ function QuestController.Init(self: QuestController)
 				
 				AccountedForQuestsHashMap[Quest.Id] = true
 			end
+		else
+			CurrentData = Quests
+			
+			if IsCurrentDataNil then
+				self.QuestsLoaded:Fire(Quests)
+			end
 		end
 		
-		CurrentData = Quests
-		
-		if IsCurrentDataNil then
-			self.QuestsLoaded:Fire(Quests)
-		end
 	end
 	
 	ReplicaController.ReplicaOfClassCreated('PlayerQuests', function(Replica)
@@ -155,15 +159,18 @@ end
 
 function QuestController.IsQuestCompleted(self: QuestController, QuestId: string)
 	local BaseQuest = self:GetBaseQuest(QuestId)
+	print('basequest exists:', BaseQuest ~= nil)
 	if not BaseQuest then
 		return false
 	end
 	
 	local QuestInstance = FindQuestInTable(CurrentData, QuestId)
+	print('questinstance exists:', QuestInstance ~= nil)
 	if not QuestInstance then
 		return false
 	end
 	
+	print('Count Is Enough:', QuestInstance.CurrentValue >= BaseQuest.MaxValue, QuestInstance.CurrentValue, BaseQuest.MaxValue)
 	return QuestInstance.CurrentValue >= BaseQuest.MaxValue
 end
 
