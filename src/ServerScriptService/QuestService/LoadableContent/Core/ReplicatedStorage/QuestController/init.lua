@@ -65,6 +65,8 @@ local function FindQuestInTable(Quests: { QuestInstance }, QuestId: string): Que
 			return Quest
 		end
 	end
+
+	return nil
 end
 
 -- Controller Functions & Methods
@@ -159,18 +161,15 @@ end
 
 function QuestController.IsQuestCompleted(self: QuestController, QuestId: string)
 	local BaseQuest = self:GetBaseQuest(QuestId)
-	print('basequest exists:', BaseQuest ~= nil)
 	if not BaseQuest then
 		return false
 	end
 	
 	local QuestInstance = FindQuestInTable(CurrentData, QuestId)
-	print('questinstance exists:', QuestInstance ~= nil)
 	if not QuestInstance then
 		return false
 	end
 	
-	print('Count Is Enough:', QuestInstance.CurrentValue >= BaseQuest.MaxValue, QuestInstance.CurrentValue, BaseQuest.MaxValue)
 	return QuestInstance.CurrentValue >= BaseQuest.MaxValue
 end
 
